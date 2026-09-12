@@ -1,0 +1,398 @@
+{% load static %}
+{% load tailwind_tags %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEST | Мебель для дома</title>
+    {% tailwind_css %}
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans text-gray-800">
+
+    <!-- Шапка сайта -->
+    <header class="bg-blue-600 text-white p-6 text-center shadow-md">
+        <h1 class="text-3xl font-bold mb-2">🛋️ NEST | Мебель для дома</h1>
+        <p class="text-lg opacity-90">Диваны, кровати, столы, стулья, шкафы — всё для уюта</p>
+    </header>
+
+    <!-- Основной каталог -->
+    <main class="max-w-5xl mx-auto p-6">
+        <h2 class="text-2xl font-bold mb-6 text-gray-900">Каталог товаров</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {% if products %}
+                {% for product in products %}
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                    <div class="h-48 mb-4 overflow-hidden rounded-lg bg-gray-100">
+                        <img 
+                            src="{{ product.image_url|default:'https://via.placeholder.com/400x300?text=Нет+фото' }}"
+                            alt="{{ product.name }}"
+                            class="w-full h-full object-cover"
+                        >
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="text-lg font-semibold text-gray-900">{{ product.name }}</h3>
+
+                        <!-- НОВОЕ: кнопка «Описание товара» вместо заглушки -->
+                        <div class="mb-4">
+                            <button
+                                type="button"
+                                onclick="openProductModal('{{ product.name|escapejs }}', `{{ product.description|escapejs }}`)"
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium underline flex items-center gap-1 transition"
+                            >
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Описание товара
+                            </button>
+                        </div>
+                        <!-- КОНЕЦ НОВОГО -->
+
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-xl font-bold text-gray-900">{{ product.price }} ₽</span>
+                        </div>
+                        <button 
+                            type="button"
+                            onclick="addToCart({{ product.id }})"
+                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-200 font-medium"
+                        >
+                            В корзину
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="col-span-full text-center text-gray-500">Товаров пока нет.</p>
+            {% endif %}
+        </div>
+    </main>
+
+    <!-- Плавающая корзина (справа внизу) -->
+    <div id="floating-cart" class="fixed bottom-4 right-4 w-80 bg-white p-4 rounded-xl shadow-2xl border border-gray-200 z-50">
+        <div class="flex justify-between items-center mb-3 border-b border-gray-100 pb-3">
+            <h3 class="font-bold text-lg text-gray-800">Корзина</h3>
+            <span id="cart-item-count" class="text-gray-400 text-sm">0 товаров</span>
+        </div>
+        <div id="cart-items-list" class="max-h-64 overflow-y-auto mb-4 pr-2">
+            <p class="text-gray-500 px-2 py-4 text-center">Корзина пуста</p>
+        </div>
+        <div class="border-t pt-3">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-gray-500 text-sm">Итого:</span>
+                <span id="cart-total-value" class="font-bold text-xl text-gray-900">0 ₽</span>
+            </div>
+            <button 
+                type="button"
+                onclick="checkout()"
+                class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition duration-200 font-bold"
+            >
+                Оформить заказ
+            </button>
+        </div>
+    </div>
+
+    <!-- НОВОЕ: Модальное окно для описания товара -->
+    <div id="product-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 sm:px-0">
+        <div class="relative w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden">
+            <button type="button" onclick="closeProductModal()" class="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="p-6">
+                <h3 id="modal-product-name" class="text-2xl font-bold text-gray-900 mb-2"></h3>
+                <div id="modal-product-description" class="text-gray-700 leading-relaxed whitespace-pre-wrap"></div>
+            </div>
+        </div>
+    </div>
+    <!-- КОНЕЦ НОВОГО -->
+
+    <!-- Футер в стиле PR-CY -->
+    <footer class="bg-white border-t border-gray-200 mt-auto pt-12 pb-6 text-sm text-gray-600">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-10">
+                <div class="lg:col-span-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">N</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900">NEST</h3>
+                            <p class="text-sm text-gray-500">Мебель для дома</p>
+                        </div>
+                    </div>
+                    <p class="mb-4 text-gray-500">
+                        © 2024 NEST. Все права защищены.<br>
+                        ООО «Уютный Дом»<br>
+                        ИНН 1234567890 | ОГРН 1234567890123
+                    </p>
+                    <div class="flex gap-4">
+                        <a href="#" class="text-gray-500 hover:text-blue-600 transition">VK</a>
+                        <a href="#" class="text-gray-500 hover:text-blue-600 transition">Telegram</a>
+                    </div>
+                    <div class="flex gap-2 mt-4">
+                        <a href="#" class="text-gray-500 hover:text-blue-600 transition">RU</a>
+                        <span class="text-gray-300">/</span>
+                        <a href="#" class="text-gray-500 hover:text-blue-600 transition">EN</a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Инструменты</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-blue-600 transition">Анализ сайта</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">SEO-анализ страницы</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Чат GPT</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Аудит сайта</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Антиплагиат онлайн</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">WHOIS домена</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Сообщество</h4>
+                    <ul class="space-y-2 mb-6">
+                        <li><a href="#" class="hover:text-blue-600 transition">Блог</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Сообщество</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">База статей</a></li>
+                    </ul>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Ресурсы</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-blue-600 transition">API анализ сайта</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Партнёрская программа</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Рейтинги сайтов</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Бесплатные лимиты</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Продукты</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-blue-600 transition">Тарифы и цены</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Возможности</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Проверка позиций (LINE)</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">SEO расширение для Chrome</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Информация</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="hover:text-blue-600 transition">О компании</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Написать нам</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">База знаний</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Условия использования</a></li>
+                        <li><a href="#" class="hover:text-blue-600 transition">Обновления</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Плашка cookie -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-3 text-gray-600">
+                    <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <span>Используя сайт, вы соглашаетесь с обработкой cookie и сбором технических данных для улучшения работы сайта согласно <a href="#" class="text-blue-600 underline">политике конфиденциальности</a>.</span>
+                </div>
+                <button type="button" class="bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50 transition">Принять</button>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Весь JS в одном месте -->
+    <script>
+        // --- НОВОЕ: Функции модального окна описания товара ---
+        function openProductModal(name, description) {
+            document.getElementById('modal-product-name').textContent = name;
+            document.getElementById('modal-product-description').textContent = description || 'Описание отсутствует.';
+            document.getElementById('product-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeProductModal() {
+            document.getElementById('product-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('product-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeProductModal();
+        });
+        // --- КОНЕЦ НОВОГО ---
+
+        // --- 1. Защита от XSS ---
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- 2. Получение CSRF-токена ---
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // --- 3. Добавление товара в корзину ---
+        async function addToCart(productId) {
+            const formData = new FormData();
+            formData.append('product_id', productId);
+            formData.append('quantity', '1');
+
+            try {
+                const res = await fetch('{% url "add_to_cart" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    credentials: 'same-origin',
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    throw new Error('Неверный формат ответа от сервера');
+                }
+
+                if (data.status === 'ok') {
+                    renderCart();
+                    showNotification('Товар добавлен в корзину!');
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Не удалось добавить товар'));
+                }
+            } catch (error) {
+                alert('Произошла ошибка сети. Проверьте консоль (F12).');
+            }
+        }
+
+        // --- 4. Удаление товара из корзины ---
+        async function removeFromCart(itemId) {
+            const formData = new FormData();
+            formData.append('item_id', itemId);
+
+            try {
+                const res = await fetch('{% url "remove_from_cart" %}', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    credentials: 'same-origin',
+                });
+
+                let data;
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    throw new Error('Ошибка формата');
+                }
+
+                if (data.status === 'ok') {
+                    renderCart();
+                } else {
+                    alert('Ошибка удаления: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                alert('Ошибка сети.');
+            }
+        }
+
+        // --- 5. Отрисовка корзины ---
+        async function renderCart() {
+            const cartItemsList = document.getElementById('cart-items-list');
+            const totalElement = document.getElementById('cart-total-value');
+            const countElement = document.getElementById('cart-item-count');
+
+            if (!cartItemsList || !totalElement) return;
+
+            cartItemsList.innerHTML = '<div class="text-gray-500 py-4 text-center">Загрузка...</div>';
+
+            try {
+                const res = await fetch('{% url "get_cart" %}');
+                const data = await res.json();
+
+                cartItemsList.innerHTML = '';
+
+                if (!data.items || data.items.length === 0) {
+                    cartItemsList.innerHTML = '<p class="text-gray-500 px-2 py-4 text-center">Корзина пуста</p>';
+                    totalElement.textContent = '0 ₽';
+                    if (countElement) countElement.textContent = '0 товаров';
+                    return;
+                }
+
+                let totalSum = 0;
+                let totalCount = 0;
+
+                data.items.forEach(item => {
+                    const lineTotal = item.price * item.quantity;
+                    totalSum += lineTotal;
+                    totalCount += item.quantity;
+
+                    const div = document.createElement('div');
+                    div.className = 'relative flex justify-between items-center p-2 border-b border-gray-100 last:border-none hover:bg-gray-50 transition-colors';
+
+                    div.innerHTML = `
+                        <div class="pr-10">
+                            <strong class="block text-sm font-medium text-gray-800">${escapeHtml(item.name)}</strong>
+                            <span class="text-xs text-gray-500">
+                                ${item.quantity} × ${item.price.toLocaleString()} ₽
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="removeFromCart(${item.id})"
+                            class="absolute top-1 right-1 text-red-500 hover:text-red-700 hover:bg-red-50 hover:rounded-full p-1 transition-all z-10"
+                            title="Удалить"
+                        >
+                            ✕
+                        </button>
+                    `;
+                    cartItemsList.appendChild(div);
+                });
+
+                totalElement.textContent = `${totalSum.toLocaleString()} ₽`;
+                if (countElement) countElement.textContent = `${totalCount} товаров`;
+
+            } catch (error) {
+                cartItemsList.innerHTML = '<p class="text-red-500 px-2 py-4 text-center">Ошибка загрузки корзины</p>';
+            }
+        }
+
+        // --- 6. Уведомление ---
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed; top: 20px; right: 20px;
+                background: #10b981; color: white; padding: 12px 24px;
+                border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 9999; animation: slideIn 0.3s ease-out;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // --- Заглушка оформления заказа ---
+        function checkout() {
+            alert('Переход к оформлению заказа...');
+        }
+
+        // --- Инициализация ---
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCart();
+        });
+    </script>
+</body>
+</html>

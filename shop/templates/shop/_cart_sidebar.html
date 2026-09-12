@@ -1,0 +1,39 @@
+{% load static %}
+
+<aside id="cart-sidebar" class="cart-closed"
+       style="position: fixed; top: 0; right: 0; width: 360px; height: 100%; background: white; box-shadow: -4px 0 12px rgba(0,0,0,0.08); z-index: 9999; transition: transform 0.3s ease; overflow-y: auto; display: flex; flex-direction: column;">
+
+    <!-- Шапка панели -->
+    <header style="padding: 20px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; color: #111827; font-size: 1.25rem;">Ваша корзина</h3>
+        <button onclick="toggleCart()" type="button" style="background: none; border: none; color: #6b7280; cursor: pointer; font-size: 1.2rem;">&times;</button>
+    </header>
+
+    <!-- Список товаров (заполняется JS) -->
+    <div style="flex: 1; padding: 20px; min-height: 0;">
+        <!-- Сюда JS будет вставлять товары -->
+    </div>
+
+    <!-- Подвал с итогом -->
+    <footer style="padding: 20px; background: #f9fafb; border-top: 1px solid #f3f4f6;">
+        <!-- Итог появится здесь после renderCart() -->
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1rem; font-weight: 700; color: #1f2937;">
+            <span>Итого:</span>
+            <span id="cart-total-display">0 ₽</span>
+        </div>
+        <p style="margin-top: 12px; font-size: 0.75rem; color: #9ca3af; text-align: center;">* Сумма не включает доставку</p>
+
+        <button style="width: 100%; padding: 14px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 12px;"
+                onclick="checkout()">Оформить заказ</button>
+    </footer>
+</aside>
+
+<style>
+    #cart-sidebar.cart-open { transform: translateX(0); }
+    #cart-sidebar.cart-closed { transform: translateX(100%); }
+
+    #cart-sidebar::-webkit-scrollbar { width: 6px; }
+    #cart-sidebar::-webkit-scrollbar-track { background: transparent; }
+    #cart-sidebar::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+    #cart-sidebar::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+</style>
