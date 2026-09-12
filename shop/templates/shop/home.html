@@ -1,3 +1,4 @@
+
 {% load static %}
 {% load tailwind_tags %}
 
@@ -36,7 +37,7 @@
                     <div class="flex-grow">
                         <h3 class="text-lg font-semibold text-gray-900">{{ product.name }}</h3>
 
-                        <!-- НОВОЕ: кнопка «Описание товара» вместо заглушки -->
+                        <!-- Кнопка «Описание товара» -->
                         <div class="mb-4">
                             <button
                                 type="button"
@@ -47,7 +48,6 @@
                                 Описание товара
                             </button>
                         </div>
-                        <!-- КОНЕЦ НОВОГО -->
 
                         <div class="flex justify-between items-center mb-4">
                             <span class="text-xl font-bold text-gray-900">{{ product.price }} ₽</span>
@@ -92,7 +92,7 @@
         </div>
     </div>
 
-    <!-- НОВОЕ: Модальное окно для описания товара -->
+    <!-- Модальное окно для описания товара -->
     <div id="product-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 sm:px-0">
         <div class="relative w-full max-w-2xl bg-white rounded-xl shadow-2xl overflow-hidden">
             <button type="button" onclick="closeProductModal()" class="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 transition">
@@ -104,7 +104,39 @@
             </div>
         </div>
     </div>
-    <!-- КОНЕЦ НОВОГО -->
+
+    <!-- Модальное окно оформления заказа -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-sm px-4 sm:px-0">
+        <div class="relative w-full max-w-md bg-white rounded-xl shadow-2xl overflow-hidden">
+            <button type="button" onclick="closeCheckoutModal()" class="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white text-gray-500 hover:text-gray-700 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="p-6">
+                <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">Оформление заказа</h3>
+                <form id="checkout-form" onsubmit="submitCheckout(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ФИО</label>
+                        <input type="text" name="fio" required placeholder="Иванов Иван Иванович"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Номер телефона</label>
+                        <input type="tel" name="phone" required placeholder="+7 (999) 123-45-67"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Номер банковской карты</label>
+                        <input type="text" name="card" required placeholder="0000 0000 0000 0000" maxlength="19"
+                            class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition" />
+                    </div>
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition duration-200 font-bold mt-2">
+                        Оформить заказ
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Футер в стиле PR-CY -->
     <footer class="bg-white border-t border-gray-200 mt-auto pt-12 pb-6 text-sm text-gray-600">
@@ -197,7 +229,7 @@
 
     <!-- Весь JS в одном месте -->
     <script>
-        // --- НОВОЕ: Функции модального окна описания товара ---
+        // --- Модальное окно описания товара ---
         function openProductModal(name, description) {
             document.getElementById('modal-product-name').textContent = name;
             document.getElementById('modal-product-description').textContent = description || 'Описание отсутствует.';
@@ -213,9 +245,85 @@
         document.getElementById('product-modal').addEventListener('click', function(e) {
             if (e.target === this) closeProductModal();
         });
-        // --- КОНЕЦ НОВОГО ---
 
-        // --- 1. Защита от XSS ---
+        // --- Модальное окно оформления заказа ---
+        function checkout() {
+            const countText = document.getElementById('cart-item-count').textContent;
+            const count = parseInt(countText) || 0;
+
+            if (count === 0) {
+                showNotification('Корзина пуста — добавьте товар перед оформлением');
+                return;
+            }
+
+            document.getElementById('checkout-modal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkout-modal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('checkout-modal').addEventListener('click', function(e) {
+            if (e.target === this) closeCheckoutModal();
+        });
+
+        function submitCheckout(event) {
+            event.preventDefault();
+            closeCheckoutModal();
+            clearCart();
+            showNotification('Заказ успешно оформлен!');
+            document.getElementById('checkout-form').reset();
+        }
+
+        // --- Очистка корзины после заказа ---
+        async function clearCart() {
+            try {
+                const res = await fetch('{% url "get_cart" %}');
+                const data = await res.json();
+
+                if (data.items && data.items.length > 0) {
+                    for (const item of data.items) {
+                        await fetch('{% url "remove_from_cart" %}', {
+                            method: 'POST',
+                            body: new URLSearchParams({ item_id: item.id }),
+                            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                            credentials: 'same-origin',
+                        });
+                    }
+                }
+                renderCart();
+            } catch (error) {
+                console.error('Ошибка очистки корзины:', error);
+            }
+        }
+
+        // --- Форматирование номера карты и телефона ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const cardInput = document.querySelector('input[name="card"]');
+            if (cardInput) {
+                cardInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '').slice(0, 16);
+                    value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                    e.target.value = value;
+                });
+            }
+
+            const phoneInput = document.querySelector('input[name="phone"]');
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    if (value.startsWith('8')) value = '7' + value.slice(1);
+                    if (value.startsWith('7') && value.length > 1) {
+                        value = value.replace(/(\d{1})(\d{3})(\d{3})(\d{2})(\d{2})/, '+$1 ($2) $3-$4-$5');
+                    }
+                    e.target.value = value;
+                });
+            }
+        });
+
+        // --- Защита от XSS ---
         function escapeHtml(text) {
             if (!text) return '';
             return text
@@ -226,7 +334,7 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // --- 2. Получение CSRF-токена ---
+        // --- Получение CSRF-токена ---
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -242,7 +350,7 @@
             return cookieValue;
         }
 
-        // --- 3. Добавление товара в корзину ---
+        // --- Добавление товара в корзину ---
         async function addToCart(productId) {
             const formData = new FormData();
             formData.append('product_id', productId);
@@ -274,7 +382,7 @@
             }
         }
 
-        // --- 4. Удаление товара из корзины ---
+        // --- Удаление товара из корзины ---
         async function removeFromCart(itemId) {
             const formData = new FormData();
             formData.append('item_id', itemId);
@@ -304,7 +412,7 @@
             }
         }
 
-        // --- 5. Отрисовка корзины ---
+        // --- Отрисовка корзины ---
         async function renderCart() {
             const cartItemsList = document.getElementById('cart-items-list');
             const totalElement = document.getElementById('cart-total-value');
@@ -365,7 +473,7 @@
             }
         }
 
-        // --- 6. Уведомление ---
+        // --- Уведомление ---
         function showNotification(message) {
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -382,11 +490,6 @@
                 notification.style.transition = 'opacity 0.3s';
                 setTimeout(() => notification.remove(), 300);
             }, 3000);
-        }
-
-        // --- Заглушка оформления заказа ---
-        function checkout() {
-            alert('Переход к оформлению заказа...');
         }
 
         // --- Инициализация ---
